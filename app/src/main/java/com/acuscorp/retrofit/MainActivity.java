@@ -6,10 +6,18 @@ import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -28,18 +36,90 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         textViewResult = findViewById(R.id.tv_result);
 
+
+        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+        logging.level(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .addInterceptor(new Interceptor() {
+                    @NotNull
+                    @Override
+                    public okhttp3.Response intercept(@NotNull Chain chain) throws IOException {
+                        Request originalRequest = chain.request();
+                        Request newReques = originalRequest.newBuilder()
+                                .header("Interceptor-Header","xyz")
+                                .build();
+                        return chain.proceed(newReques);
+                    }
+                })
+                .addInterceptor(logging)
+                .build();
+
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl("https://jsonplaceholder.typicode.com/")       //! Do not forget to end with "/"
                 .addConverterFactory(GsonConverterFactory.create())
+                .client(client)
                 .build();
 
 
         jsonPlaceHolderApi = retrofit.create(JsonPlaceHolderApi.class);
 
-        //getPost();
+        getPost();
         //getComments();
-        createPost();
+        //createPost();
+        //updatePost();
+       // deletePost();
 
+    }
+
+    private void deletePost() {
+
+        Call<Void> call = jsonPlaceHolderApi.deletePost(5);
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                textViewResult.setText("Code: " + response.code());
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                textViewResult.setText(t.getMessage());
+            }
+        });
+    }
+
+    private void updatePost() {
+        Map<String,String> headers = new HashMap<>();
+        headers.put("Map-Header","def");
+        headers.put("Map-Header","ghi");
+
+
+        Post post = new Post(12,null,"new text");
+        //Call<Post> call = jsonPlaceHolderApi.putPost("abc",5,post);
+        Call<Post> call = jsonPlaceHolderApi.patchPost(headers,5,post);
+
+        call.enqueue(new Callback<Post>() {
+            @Override
+            public void onResponse(Call<Post> call, Response<Post> response) {
+                if(!response.isSuccessful()){
+                    textViewResult.setText("Code: " + response.code());
+                    return;
+                }
+                Post postResponse = response.body();
+                String content = "";
+                content += "Code: " + response.code() + "\n" ;
+                content += "ID: " + +postResponse.getId() + "\n" ;
+                content += "User ID: " + postResponse.getUserId() + "\n";
+                content += "Title: " + postResponse.getTitle() + "\n";
+                content += "Text: " + postResponse.getText() + "\n\n";
+                textViewResult.setText(content);
+
+            }
+
+            @Override
+            public void onFailure(Call<Post> call, Throwable t) {
+                textViewResult.setText(t.getMessage());
+            }
+        });
     }
 
     private void createPost() {
@@ -60,13 +140,13 @@ public class MainActivity extends AppCompatActivity {
 
                 Post postResponse = response.body();
 
-                    String content = "";
-                    content += "Code: " + response.code() + "\n" ;
-                    content += "ID: " + +postResponse.getId() + "\n" ;
-                    content += "User ID: " + postResponse.getUserId() + "\n";
-                    content += "Title: " + postResponse.getTitle() + "\n";
-                    content += "Text: " + postResponse.getText() + "\n\n";
-                    textViewResult.setText(content);
+                String content = "";
+                content += "Code: " + response.code() + "\n" ;
+                content += "ID: " + +postResponse.getId() + "\n" ;
+                content += "User ID: " + postResponse.getUserId() + "\n";
+                content += "Title: " + postResponse.getTitle() + "\n";
+                content += "Text: " + postResponse.getText() + "\n\n";
+                textViewResult.setText(content);
 
 
             }
