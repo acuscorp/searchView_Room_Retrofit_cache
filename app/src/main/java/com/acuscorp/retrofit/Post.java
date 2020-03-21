@@ -4,7 +4,6 @@ import com.google.gson.annotations.SerializedName;
 
 /**
  * Created by Noé Adrian Acuna Prado on 26/02/2020.
- * Sistema BEA
  * acuscorp@gmail.com
  */
 public class Post {
